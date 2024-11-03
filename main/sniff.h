@@ -11,47 +11,10 @@
 #define DNS_PORT          53
 
 
-typedef struct
-{
-    uint8_t version:4;           // 4-bit version
-    uint8_t header_length:4;      // 4-bit header length
-    uint8_t tos;                  // Type of Service
-    uint16_t total_length;        // Total length
-    uint16_t identification;      // Identification
-    uint16_t flags:3;             // Flags (3 bits)
-    uint16_t fragment_offset:13;  // Fragment offset (13 bits)
-    uint8_t ttl;                  // Time to Live
-    uint8_t protocol;             // Protocol
-    uint16_t checksum;            // Header checksum
-    uint8_t src_ip[4];            // Source IP address
-    uint8_t dst_ip[4];            // Destination IP address
-    uint8_t options[];            // Options (variable length, if header_length > 5)
-} ipv4_header_t;
-
-typedef struct {
-    ipv4_header_t header;
-    uint8_t data[];  // Data (variable length)
-} ipv4_packet_t;
-
-
-
-/* UDP Packet structure*/
-
-typedef struct {
-    uint16_t src_port;
-    uint16_t dst_port;
-    uint16_t length;
-    uint16_t checksum;
-} udp_header_t;
-
-typedef struct {
-    udp_header_t header;
-    uint8_t data[];  // Data (variable length)
-} udp_packet_t;
-
-
-
-/* DNS Packet structure */
+/*
+    DNS Packet structure 
+    OSI Layer 7
+*/
 
 typedef struct {
     uint16_t id;
@@ -86,6 +49,55 @@ typedef struct {
 } dns_packet_t;
 
 
+/*
+    UDP Packet structure
+    OSI Layer 4
+*/
+
+typedef struct {
+    uint16_t src_port;
+    uint16_t dst_port;
+    uint16_t length;
+    uint16_t checksum;
+} udp_header_t;
+
+typedef struct {
+    udp_header_t header;
+    uint8_t data[];  // Data (variable length)
+} udp_packet_t;
+
+
+/* 
+    IPV4 Packets structure 
+    OSI Layer 3
+*/
+
+typedef struct
+{
+    uint8_t version:4;           // 4-bit version
+    uint8_t header_length:4;      // 4-bit header length
+    uint8_t tos;                  // Type of Service
+    uint16_t total_length;        // Total length
+    uint16_t identification;      // Identification
+    uint16_t flags:3;             // Flags (3 bits)
+    uint16_t fragment_offset:13;  // Fragment offset (13 bits)
+    uint8_t ttl;                  // Time to Live
+    uint8_t protocol;             // Protocol
+    uint16_t checksum;            // Header checksum
+    uint8_t src_ip[4];            // Source IP address
+    uint8_t dst_ip[4];            // Destination IP address
+    uint8_t options[];            // Options (variable length, if header_length > 5)
+} ipv4_header_t;
+
+typedef struct {
+    ipv4_header_t header;
+    uint8_t data[];  // Data (variable length)
+} ipv4_packet_t;
+
+/*
+    Frame control structure
+    OSI Layer 2
+*/
 
 typedef struct {
     uint8_t protocol_version:2;
@@ -124,7 +136,6 @@ typedef struct {
     data_frame_mac_header_t mac_header;
     uint8_t body[];
 } data_frame_t;
-
 
 void parse_dns_packet(uint8_t *data, uint16_t length);
 void wifi_sniffer_init(void);
