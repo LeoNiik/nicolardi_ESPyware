@@ -18,6 +18,7 @@ uint8_t level = 0, channel = 2;
 void wifi_sniffer_init(void)
 {
     ESP_ERROR_CHECK(esp_wifi_set_promiscuous(true));
+    ESP_LOGI(TAG, "Setting interface in promiscuous mode");
     esp_wifi_set_promiscuous_rx_cb(&wifi_sniffer_packet_handler);
 }
 
@@ -27,10 +28,40 @@ void wifi_sniffer_set_channel(uint8_t channel)
 }
 
 
+ipv4_packet_t *parse_ipv4_packet(data_frame_t *frame) {
+    uint8_t *frame_buffer = frame->body;
+
+    // Check if the frame is protected, and skip if so
+    if (frame->mac_header.frame_control.protected_frame == 1) {
+        //ESP_LOGI(TAG, "Protected frame, skipping...");
+        return NULL;
+    }
+
+    // Check if QoS field is present (subtype > 7 indicates QoS Data frame)
+    if (frame->mac_header.frame_control.subtype > 7) {
+        // Skip QoS field (2 bytes)
+        frame_buffer += 2;
+    }
+
+    // Skip the LLC/SNAP header (6 bytes)
+    frame_buffer += sizeof(llc_snap_header_t);
+
+    // Check if EtherType indicates IPv4 (0x0800)
+    if (ntohs(*(uint16_t *) frame_buffer) == ETHER_TYPE_IPV4) {
+        //ESP_LOGI(TAG, "IPv4 packet detected!");
+        frame_buffer += 2;  // Move past the EtherType field
+
+        // Cast the remaining payload to an ipv4_packet_t
+        return (ipv4_packet_t *) frame_buffer;
+    }
+
+    return NULL;
+}
+
+
 
 void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type)
 {
-
     if(type != WIFI_PKT_DATA)
     {
         return;
@@ -39,19 +70,23 @@ void wifi_sniffer_packet_handler(void* buff, wifi_promiscuous_pkt_type_t type)
     wifi_promiscuous_pkt_t *frame = (wifi_promiscuous_pkt_t *) buff;
     data_frame_t *data = (data_frame_t *) frame->payload;
 
-    //filter for IPV4 packets
-    if(data->mac_header.frame_control.type != ETHER_TYPE_IPV4)
+    ipv4_packet_t *ipv4 = parse_ipv4_packet(data);
+
+    if(ipv4 == NULL)
     {
         return;
     }
-    //
-    ipv4_packet_t *ipv4 = (ipv4_packet_t *) data->body;
+
+    ESP_LOGI(TAG, "Got an IPv4 packet");
+    ESP_LOGI(TAG, "%d", ipv4->header.protocol);
 
     //filter for UDP and TCP packets
-    if(ipv4->header.protocol != UDP_PROTOCOL || ipv4->header.protocol != TCP_PROTOCOL)
+
+    if(ipv4->header.protocol != UDP_PROTOCOL && ipv4->header.protocol != TCP_PROTOCOL)
     {
         return;
     }
+    ESP_LOGI(TAG, "Got an tcp/udp packet");
     
 
     // Interpret the packet as a UDP or TCP packet and access its ports
