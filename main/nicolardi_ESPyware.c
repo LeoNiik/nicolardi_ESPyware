@@ -14,7 +14,7 @@
 
 #define WIFI_SSID      "Gama"       // Replace with your Wi-Fi SSID
 #define WIFI_PASS      "11111111"   // Replace with your Wi-Fi Password
-#define MAX_RETRY      10
+#define MAX_RETRY      2
 
 static const char *TAG = "wifi_station";
 static int retry_count = 0;
@@ -85,8 +85,12 @@ void app_main(void) {
         ret = nvs_flash_init();
     }
     ESP_ERROR_CHECK(ret);
-
-    ESP_LOGI(TAG, "ESP_WIFI_MODE_STA");
+    //connects to the wifi network
     wifi_init_sta();
+    
+    //initialize the sniffer
     wifi_sniffer_init();
+    
+
+
 }

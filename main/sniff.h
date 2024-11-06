@@ -6,11 +6,12 @@
 #define WIFI_CHANNEL_MAX               (13)
 
 
-
+#define ETHER_TYPE_EAPOL 0x888E
 #define ETHER_TYPE_IPV4   0x0800
 #define TCP_PROTOCOL      6
 #define UDP_PROTOCOL      17
 #define DNS_PORT          53
+
 
 
 /*
@@ -100,6 +101,17 @@ typedef struct {
     Frame control structure
     OSI Layer 2
 */
+typedef enum {
+    EAPOL_EAP_PACKET = 0,
+	EAPOL_START,
+	EAPOL_LOGOFF,
+	EAPOL_KEY,
+	EAPOL_ENCAPSULATED_ASF_ALERT,
+    EAPOL_MKA,
+    EAPOL_ANNOUNCEMENT_GENERIC,
+    EAPOL_ANNOUNCEMENT_SPECIFIC,
+    EAPOL_ANNOUNCEMENT_REQ
+} eapol_packet_types_t;
 
 typedef struct {
     uint8_t protocol_version:2;
@@ -124,6 +136,17 @@ typedef struct {
     uint8_t addr3[6];
     uint16_t sequence_control;
 } data_frame_mac_header_t;
+//eapol header 
+typedef struct {
+	uint8_t version;
+	uint8_t packet_type;
+	uint16_t packet_body_length;
+} eapol_packet_header_t;
+//eapol packet
+typedef struct {
+	eapol_packet_header_t header;
+	uint8_t packet_body[];
+} eapol_packet_t;
 
 //logical link control header 
 typedef struct {
@@ -139,7 +162,46 @@ typedef struct {
     uint8_t body[];
 } data_frame_t;
 
-void parse_dns_packet(uint8_t *data, uint16_t length);
+typedef union {
+    struct __attribute__((__packed__)) {
+        uint8_t key_descriptor_version:3;
+        uint8_t key_type:1;
+        uint8_t key_index:2;
+        uint8_t install:1;
+        uint8_t key_ack:1;
+        uint8_t key_mic:1;
+        uint8_t secure:1;
+        uint8_t error:1;
+        uint8_t request:1;
+        uint8_t encrypted_key_data:1;
+        uint8_t smk_message:1;
+        uint8_t :2;
+    };
+    uint16_t full_value;  // Full 16-bit value representation
+} key_information_t;
+
+
+//pacchetto eapol key 
+typedef struct __attribute__((__packed__)) {
+    uint8_t descriptor_type;
+    key_information_t key_information;
+    uint16_t key_length;
+    uint8_t key_replay_counter[8];
+    uint8_t key_nonce[32];
+    uint8_t key_iv[16];
+    uint8_t key_rsc[8];
+    uint8_t reserved[8];
+    uint8_t key_mic[16];
+    uint16_t key_data_length;
+    uint8_t key_data[];
+} eapol_key_packet_t;
+
+eapol_packet_t *parse_eapol_packet(data_frame_t *frame);
+
+
 void wifi_sniffer_init(void);
 void wifi_sniffer_set_channel(uint8_t channel);
-static void wifi_sniffer_packet_handler(void *buff, wifi_promiscuous_pkt_type_t type);
+eapol_key_packet_t *parse_eapol_key_packet(eapol_packet_t *eapol_packet);
+
+
+static void wifi_sniffer_packet_handler1(void *buff, wifi_promiscuous_pkt_type_t type);
